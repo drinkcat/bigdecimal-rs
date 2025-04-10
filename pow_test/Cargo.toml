@@ -1,0 +1,8 @@
+[package]
+name = "pow_test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bigdecimal = { path = ".." }
+rand = "0.9.0"
