@@ -7,7 +7,7 @@ use bigdecimal::BigDecimal;
 /// Compute bd**exp using exponentiation by squaring algorithm, while maintaining the
 /// precision specified in ctx (the number of digits would otherwise explode).
 // Algorithm comes from https://en.wikipedia.org/wiki/Exponentiation_by_squaring
-fn pow_with_context(bd: BigDecimal, exp: u32, ctx: &bigdecimal::Context) -> BigDecimal {
+fn pow_with_context(bd: &BigDecimal, exp: u32, ctx: &bigdecimal::Context) -> BigDecimal {
     if exp == 0 {
         return 1.into();
     }
@@ -30,7 +30,7 @@ fn pow_with_context(bd: BigDecimal, exp: u32, ctx: &bigdecimal::Context) -> BigD
     let mut margin = MARGIN_PER_MUL * (exp.count_ones() + exp.ilog2() - 1) as u64;
 
     let mut bd_y: BigDecimal = 1.into();
-    let mut bd_x = bd;
+    let mut bd_x = bd.clone();
     let mut n = exp;
     while n > 1 {
         if n % 2 == 1 {
@@ -50,7 +50,7 @@ fn pow_with_context(bd: BigDecimal, exp: u32, ctx: &bigdecimal::Context) -> BigD
 fn test_one<T>(start: T, exp: u32, str: &str) where T: Into<BigDecimal> + Display {
     println!("Compute {start}**{exp}");
 
-    let bd = pow_with_context(start.into(),exp, &bigdecimal::Context::default());
+    let bd = pow_with_context(&start.into(),exp, &bigdecimal::Context::default());
     let bd_good = BigDecimal::from_str(str).unwrap();
 
     println!("100d  0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
@@ -60,6 +60,25 @@ fn test_one<T>(start: T, exp: u32, str: &str) where T: Into<BigDecimal> + Displa
     let delta = (bd-&bd_good)/&bd_good;
     println!("delta {}", delta);
     assert!(delta.abs() < BigDecimal::from_str("5e-100").unwrap());
+}
+
+fn test_two<T>(start: T, exp: u32) where T: Into<BigDecimal> + Display {
+    println!("Compute/compare {start}**{exp}");
+
+    let context = bigdecimal::Context::new(50.try_into().unwrap(), bigdecimal::RoundingMode::HalfEven);
+    let context_good = bigdecimal::Context::new(500.try_into().unwrap(), bigdecimal::RoundingMode::HalfEven);
+
+    let bd_start = start.into();
+    let bd = pow_with_context(&bd_start, exp, &context);
+    let bd_good = pow_with_context(&bd_start, exp, &context_good);
+
+    println!("100d  0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+    println!("good  {bd_good}");
+    println!("val   {bd}");
+
+    let delta = (bd-&bd_good)/&bd_good;
+    println!("delta {}", delta);
+    assert!(delta.abs() < BigDecimal::from_str("5e-50").unwrap());
 }
 
 fn main() {
@@ -73,4 +92,8 @@ fn main() {
     test_one(2, 2001, "2.296261390548509048465666402355363968044635404177390400955285473651532522784740627713318972633012539836891929277974925546894237921726110662e602");
     test_one(2, 3000000000, "9.8162042336235053508313854078782835648991393286913072670026492205522618203568834202759669215027003865712110468405800021098042607617495e903089986");
     test_one(BigDecimal::from(2).inverse(), 30000000, "1.34921314623699835510360889355448887159595110457423959780496317685705095413905406464421931122265203166201415504288117880522818881981650e-9030900");
+
+    for _ in 0..10000 {
+        test_two(BigDecimal::try_from(rand::random_range(-1e9..=1e9)).unwrap(), rand::random_range(0.0..=1e9) as u32);
+    }
 }
