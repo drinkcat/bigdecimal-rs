@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use bigdecimal::{BigDecimal, RoundingMode};
+use bigdecimal::{num_bigint::BigInt, BigDecimal, RoundingMode};
 
 fn test_one<T>(start: T, exp: i64, str: &str) where T: Display, BigDecimal: From<T> {
     println!("Compute {start}**{exp}");
@@ -57,6 +57,12 @@ fn main() {
     test_one(3, -30000000, "2.2824965348198962029744520058679746159742143842721452620663907608967745444344346503448190515521985159162206416095535917875712100566195e-14313638");
 
     for _ in 0..100000000 {
-        test_two(BigDecimal::try_from(rand::random_range(-1e9..=1e9)).unwrap(), rand::random_range(-1e9..=1e9) as i64);
+        test_two(BigDecimal::try_from(rand::random_range(-1e100..=1e100)).unwrap(), rand::random_range(-1e9..=1e9) as i64);
+
+        let mut bi = BigInt::from(rand::random_range(i64::MIN..=i64::MAX));
+        bi *= rand::random_range(0..=u64::MAX);
+        bi *= rand::random_range(0..=u64::MAX);
+        let bd = BigDecimal::new(bi, rand::random_range(-100..100));
+        test_two(bd, rand::random_range(-1e9..=1e9) as i64);
     }
 }
